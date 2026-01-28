@@ -1,0 +1,73 @@
+version: '3.9'
+
+services:
+  admin:
+    build:
+      context: ./admin/app
+    ports:
+      - "8000:8000"
+    restart: always
+    volumes:
+      - public_files:/public_files
+
+  auth:
+    build:
+      context: ./auth/app
+    ports:
+      - "8001:8001"
+    restart: always
+    volumes:
+      - public_files:/public_files
+
+  buyer:
+    build:
+      context: ./buyer/app
+    ports:
+      - "8002:8002"
+    restart: always
+    volumes:
+      - public_files:/public_files
+
+  order:
+    build:
+      context: ./order/app
+    ports:
+      - "8003:8003"
+    restart: always
+    volumes:
+      - public_files:/public_files
+
+  profiles:
+    build:
+      context: ./profiles/app
+    ports:
+      - "8004:8004"
+    restart: always
+    volumes:
+      - public_files:/public_files
+
+  supplier:
+    build:
+      context: ./supplier/app
+    ports:
+      - "8005:8005"
+    restart: always
+    volumes:
+      - public_files:/public_files
+
+  vehicle:
+    build:
+      context: ./vehicle/app
+    ports:
+      - "8006:8006"
+    restart: always
+    volumes:
+      - public_files:/public_files
+
+volumes:
+  public_files:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/ec2-user/autopartsxchange/public_files/
+      o: bind
