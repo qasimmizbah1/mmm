@@ -27,6 +27,9 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class MagicUserLogin(BaseModel):
+    email: EmailStr
+
 class UserOut(BaseModel):
     id: str                 # UUID as string
     email: EmailStr

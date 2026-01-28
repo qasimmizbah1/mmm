@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, BackgroundTasks, Body, Depends
-from models import UserRegister, UserLogin, UserOut, ForgotPasswordRequest, ResetPasswordRequest
-from services.login_service import user_login_service
+from models import UserRegister, UserLogin, UserOut, ForgotPasswordRequest, ResetPasswordRequest, MagicUserLogin
+from services.login_service import user_login_service, user_magiclogin_service, verify_magiclogin_service
 from services.register_service import user_register_service, user_verify_service, user_resend_verification_service
 from services.password_service import user_change_password_service, forgot_password_service, reset_password_service
 from deps import require_login
@@ -40,6 +40,14 @@ async def resend_verification(email: str, request: Request, background_tasks: Ba
 async def login_user(user: UserLogin, request: Request):
     return await user_login_service(user, request)
     
+@router.post("/magiclogin")
+async def login_user(user: MagicUserLogin, request: Request, background_tasks: BackgroundTasks):
+    return await user_magiclogin_service(user, request, background_tasks)
+
+@router.get("/verify-magiclogin")
+async def verify_email(token: str, request: Request):
+    return await verify_magiclogin_service(token, request)
+
 
 # Endpoint to change password
 @router.post("/change-password")

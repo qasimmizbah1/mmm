@@ -93,6 +93,20 @@ async def lifespan(app: FastAPI):
         await conn.execute("""
            CREATE INDEX IF NOT EXISTS system_log_meta_gin ON system_log USING GIN (meta)
         """)
+
+
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS magiclogin_tokens (
+                id SERIAL PRIMARY KEY,
+                token VARCHAR(255) NOT NULL UNIQUE,
+                user_id UUID NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+                expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        await conn.execute("CREATE INDEX IF NOT EXISTS idx_verification_tokens_token ON magiclogin_tokens(token)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS idx_verification_tokens_user_id ON magiclogin_tokens(user_id)")
        
         
 

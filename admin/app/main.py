@@ -1,18 +1,17 @@
-from collections import deque
 import threading
 import time
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from collections import deque
 from database import lifespan
-from routers import auth
+from routers import admin_cms, users_manage, logs, kyc_document
 from fastapi.middleware.cors import CORSMiddleware
-from services.logs_service import write_log
+from services.logging import write_log
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(lifespan=lifespan)
 
 #app.mount("/image", StaticFiles(directory="/public_files/images"), name="images")
-
 
 origins = [
     "https://auto-parts-front.vercel.app",
@@ -20,6 +19,7 @@ origins = [
 ]
 
 
+ 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,        # ONLY these origins allowed
@@ -29,14 +29,6 @@ app.add_middleware(
 )
 
 
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],   # allow all domains
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
 
 # -------------------
 # Middleware using imported rate_limit
@@ -45,7 +37,7 @@ lock = threading.Lock()
 REQUEST_LOG = {}  # {ip: deque[timestamps]}
 BLOCKED_IPS = {}  # {ip: unblock_time}
 
-LIMIT = 1000         # max requests
+LIMIT = 3000         # max requests
 WINDOW = 60        # seconds
 BLOCK_DURATION = 120  # 1 hour in seconds
 
@@ -93,29 +85,36 @@ async def rate_limiter_middleware(request: Request, call_next):
     return response
 
 
-@app.middleware("http")
-async def admin_action_logger(request: Request, call_next):
-    response = None
-    try:
-        response = await call_next(request)
-        return response
-    finally:
-        user_id = getattr(request.state, "user_id", None)  # set during auth
-        await write_log(
-            request=request,
-            action="REQUEST",
-            level="INFO",
-            user_id=user_id,
-            meta={
-                "method": request.method,
-                "status": response.status_code if response else None,
-            }
-        )
+# @app.middleware("http")
+# async def admin_action_logger(request: Request, call_next):
+#     response = None
+#     try:
+#         response = await call_next(request)
+#         return response
+#     finally:
+#         user_id = getattr(request.state, "user_id", None)  # set during auth
+#         await write_log(
+#             request=request,
+#             action="REQUEST",
+#             level="INFO",
+#             user_id=user_id,
+#             meta={
+#                 "method": request.method,
+#                 "status": response.status_code if response else None,
+#             }
+#         )
+
 
 # include auth routes
-app.include_router(auth.router)
+app.include_router(users_manage.router)
+app.include_router(logs.router)
+app.include_router(admin_cms.router)
+#app.include_router(kyc_document.router)
+
 
 @app.get("/")
 async def read_root():
-    return {"message": "Welcome to the MMM auth API "} 
+    return {"message": "Welcome to the MMM Admin API"} 
     
+def root():
+    return {"service": "admin"}

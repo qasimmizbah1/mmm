@@ -78,13 +78,13 @@ def build_email_template(subject: str, body_content: str) -> str:
     <body>
         <div class="email-container">
             <div class="header">
-                MY MIND & ME
+                AutoPartsXchange
             </div>
             <div class="content">
                 {body_content}
             </div>
             <div class="footer">
-                &copy; {datetime.utcnow().year} MY MIND & ME. All rights reserved.<br>
+                &copy; {datetime.utcnow().year} AutoPartsXchange. All rights reserved.<br>
                 Please do not reply to this email.
             </div>
         </div>
