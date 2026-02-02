@@ -22,94 +22,61 @@ async def lifespan(app: FastAPI):
     
     async with app.state.pool.acquire() as conn:
 
-        await conn.execute("CREATE EXTENSION IF NOT EXISTS citext;")
-        # Create users table
-        await conn.execute("""
-                CREATE TABLE IF NOT EXISTS app_user ( 
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(), 
-                user_name TEXT NOT NULL,
-                phone_number TEXT NOT NULL,           
-                email CITEXT UNIQUE NOT NULL, 
-                password_hash TEXT NOT NULL, 
-                role TEXT NOT NULL CHECK (role IN ('admin','patient','doctor','therapist')), 
-                is_active BOOLEAN NOT NULL DEFAULT TRUE, 
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(), 
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT now() 
+        await conn.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
+
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS referrals (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+            doctor_id UUID NOT NULL,
+            patient_id UUID NOT NULL,
+            therapist_id UUID NOT NULL,
+
+            urgency_level TEXT NOT NULL CHECK (
+                urgency_level IN ('Low','Medium','High','Emergency')
+            ),
+
+            preferred_modality TEXT NOT NULL CHECK (
+                preferred_modality IN (
+                    'Therapy',
+                    'Psychiatric Assessment',
+                    'Both'
                 )
-        """)
-        # Create verification_tokens table
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS verification_tokens (
-                id SERIAL PRIMARY KEY,
-                token VARCHAR(255) NOT NULL UNIQUE,
-                user_id UUID NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
-                expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+            ),
 
-        await conn.execute("CREATE INDEX IF NOT EXISTS idx_verification_tokens_token ON verification_tokens(token)")
-        await conn.execute("CREATE INDEX IF NOT EXISTS idx_verification_tokens_user_id ON verification_tokens(user_id)")
+            clinical_presentation TEXT NOT NULL,
+            chief_complaint TEXT NOT NULL,
+            additional_requirements TEXT,
 
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS password_reset_tokens (
-            id SERIAL PRIMARY KEY, 
-            user_id UUID NOT NULL,   
-            token TEXT UNIQUE NOT NULL,
-            expires_at TIMESTAMP NOT NULL,
-            created_at TIMESTAMP DEFAULT NOW(),
-            CONSTRAINT fk_user
-                FOREIGN KEY(user_id)
+            status TEXT NOT NULL DEFAULT 'pending' CHECK (
+                status IN (
+                    'pending',
+                    'accepted',
+                    'rejected',
+                    'in_progress',
+                    'completed'
+                )
+            ),
+
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+            CONSTRAINT fk_doctor
+                FOREIGN KEY (doctor_id)
+                REFERENCES app_user(id)
+                ON DELETE CASCADE,
+
+            CONSTRAINT fk_patient
+                FOREIGN KEY (patient_id)
+                REFERENCES app_user(id)
+                ON DELETE CASCADE,
+
+            CONSTRAINT fk_therapist
+                FOREIGN KEY (therapist_id)
                 REFERENCES app_user(id)
                 ON DELETE CASCADE
-        )
-        """)
-        await conn.execute("""
-           CREATE EXTENSION IF NOT EXISTS pgcrypto
-        """)
-
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS system_log (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID NULL REFERENCES app_user(id) ON DELETE SET NULL,
-                level TEXT NOT NULL CHECK (level IN ('DEBUG','INFO','WARNING','ERROR','CRITICAL','AUDIT')),
-                action TEXT NOT NULL,               -- short description, e.g. "USER_LOGIN"
-                path TEXT,                          -- request path like "/auth/login"
-                ip INET,                            -- client IP
-                user_agent TEXT,
-                meta JSONB NOT NULL DEFAULT '{}'::jsonb,  -- extra data
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            )
-        """)
-        await conn.execute("""
-           CREATE INDEX IF NOT EXISTS system_log_created_at_idx ON system_log (created_at DESC)
-        """)
-
-        await conn.execute("""
-           CREATE INDEX IF NOT EXISTS system_log_user_id_idx ON system_log (user_id)
-        """)
-        await conn.execute("""
-          CREATE INDEX IF NOT EXISTS system_log_level_idx ON system_log (level)
-        """)
-        await conn.execute("""
-           CREATE INDEX IF NOT EXISTS system_log_meta_gin ON system_log USING GIN (meta)
-        """)
-
-
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS magiclogin_tokens (
-                id SERIAL PRIMARY KEY,
-                token VARCHAR(255) NOT NULL UNIQUE,
-                user_id UUID NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
-                expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-        await conn.execute("CREATE INDEX IF NOT EXISTS idx_verification_tokens_token ON magiclogin_tokens(token)")
-        await conn.execute("CREATE INDEX IF NOT EXISTS idx_verification_tokens_user_id ON magiclogin_tokens(user_id)")
-       
-        
+        );
+    """)
 
 
         
