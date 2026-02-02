@@ -28,11 +28,11 @@ async def user_register_service(user, request: Request, background_tasks):
         # insert new user
         row = await conn.fetchrow(
             """
-            INSERT INTO app_user (email, password_hash, role, is_active, user_name)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id::text, email, role, is_active, user_name, created_at
+            INSERT INTO app_user (email, password_hash, role, is_active, user_name, phone_number)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id::text, email, role, is_active, user_name, phone_number, created_at
             """,
-            user.email, hashed_password, user.role, False, user.name
+            user.email, hashed_password, user.role, False, user.name, user.phone
         )
         user_id = row["id"]
 

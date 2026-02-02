@@ -5,12 +5,12 @@ import re
 from typing import Optional, Dict, Any, Literal
 
 
-
 class UserRegister(BaseModel):
     email: EmailStr
     password: str
     role: Literal["admin", "patient", "doctor", "therapist"] = "patient"  # only allowed roles
     name: str
+    phone: str
     @field_validator("password")
     def validate_password_strength(cls, v):
         if not re.search(r"[A-Z]", v):

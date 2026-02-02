@@ -16,6 +16,10 @@ class PageBase(BaseModel):
 class PageCreate(PageBase):
     pass
 
+
+class UserRole(BaseModel):
+    role: Literal['admin', 'patient', 'doctor', 'therapist']
+
 class PageUpdate(BaseModel):
     slug: str
     title: Optional[str] = None
@@ -84,6 +88,12 @@ class LogListOut(BaseModel):
     page_size: int
     total: int
     pages: int
+
+class PatientUpdate(BaseModel):
+    is_active: Optional[bool] = None
+    user_name: Optional[str] = None
+    phone_number: Optional[str] = None
+
 
 class BuyerUpdate(BaseModel):
     is_active: Optional[bool] = None
