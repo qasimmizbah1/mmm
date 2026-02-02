@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request, Depends
 from models import UserRole
 from uuid import UUID
 
-from services.users_service import view_user_service, create_referral_service
+from services.doctor_service import view_user_service, create_referral_service
 
 router = APIRouter(prefix="/v1/doctor", tags=["Manage Users"])
 
