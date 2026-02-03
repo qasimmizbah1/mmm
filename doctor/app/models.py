@@ -15,8 +15,9 @@ from pydantic import BaseModel
 from typing import Optional, Literal
 
 class ReferralCreate(BaseModel):
-    patient_id: int
-    therapist_id: int
+    doctor_id: str
+    patient_id: str
+    therapist_id: str
 
     urgency_level: Literal[
         "Low", "Medium", "High", "Emergency"
@@ -31,3 +32,15 @@ class ReferralCreate(BaseModel):
     clinical_presentation: str
     chief_complaint: str
     additional_requirements: Optional[str] = None
+
+class DoctorProfileCreate(BaseModel):
+    doctor_id: UUID
+    full_name: str
+    license_number: str
+    registration: str
+    clinic_name: Optional[str] = None
+    medical_field: str
+    address: str
+    phone: str
+    gender: Literal["male", "female", "other"]
+    dob: date
