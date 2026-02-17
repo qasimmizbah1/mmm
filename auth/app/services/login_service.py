@@ -6,7 +6,8 @@ from services.logs_service import write_log
 from utils.email import send_email
 from uuid import UUID
 from fastapi.responses import JSONResponse
-
+from deps import decode_jwt
+from utils.security import create_access_token
 
 
 async def user_login_service(user, request: Request):
@@ -40,9 +41,17 @@ async def user_login_service(user, request: Request):
                 data={"user_id": str(db_user["id"]), "role": db_user["role"]},
                 expires_delta=token_expires
             )
+            token_expires_ref = timedelta(minutes=10080)  # 7 days
+            refresh_token = create_access_token(
+                data={"user_id": str(db_user["id"]), "role": db_user["role"], "type":"refresh"},
+                expires_delta=token_expires_ref
+            )
+
+
 
             return {
                 "access_token": access_token,
+                "refresh_token": refresh_token,
                 "token_type": "bearer",
                 "user": {
                     "id": db_user["id"],
@@ -203,3 +212,29 @@ async def verify_magiclogin_service(token, request: Request):
         )
     
 
+
+async def refresh_token_service(refresh_token: str, request: Request):
+    try:
+       
+        payload = decode_jwt(refresh_token.token)
+
+        user_id = payload.get("user_id")
+        role = payload.get("role")
+
+        # Generate new access token
+        token_expires = timedelta(minutes=10)
+        new_access_token = create_access_token(
+            data={"user_id": user_id, "role": role, "type":"access"},
+            expires_delta=token_expires
+        )
+
+        return {"success": True, "access_token": new_access_token}
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Token failed: {str(e)}"
+        )

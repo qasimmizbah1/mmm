@@ -33,7 +33,7 @@ async def view_all_referrals(doctor_id: UUID, request: Request):
     return await viewall_referrals_service(doctor_id, request)
     
 
-@router.post("/doctor/profile")
+@router.post("/profile")
 async def create_doctor_profile(
     data: DoctorProfileCreate,
     request: Request,
@@ -42,7 +42,7 @@ async def create_doctor_profile(
     return await doctor_profile_service(data, request)
 
 
-@router.get("/profile/{doctor_id}")
+@router.get("/profile/me/{doctor_id}")
 async def view_doctor_profile(
     doctor_id: UUID,
     request: Request,

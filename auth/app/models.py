@@ -78,3 +78,6 @@ class LogListOut(BaseModel):
     page_size: int
     total: int
     pages: int
+
+class TokenData(BaseModel):
+    token: Optional[str] = None

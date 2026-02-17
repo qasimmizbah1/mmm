@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, BackgroundTasks, Body, Depends
-from models import UserRegister, UserLogin, UserOut, ForgotPasswordRequest, ResetPasswordRequest, MagicUserLogin
-from services.login_service import user_login_service, user_magiclogin_service, verify_magiclogin_service
+from models import UserRegister, UserLogin, UserOut, ForgotPasswordRequest, ResetPasswordRequest, MagicUserLogin, TokenData
+from services.login_service import user_login_service, user_magiclogin_service, verify_magiclogin_service, refresh_token_service
 from services.register_service import user_register_service, user_verify_service, user_resend_verification_service
 from services.password_service import user_change_password_service, forgot_password_service, reset_password_service
 from deps import require_login
@@ -100,3 +100,9 @@ async def send_email(request: Request):
 
     except Exception as e:
         return {"error": str(e)}
+    
+
+
+@router.post("/refresh-token")
+async def refresh_token(refresh_token: TokenData, request: Request):
+    return await refresh_token_service(refresh_token, request)
