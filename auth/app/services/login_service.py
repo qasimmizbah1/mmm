@@ -6,7 +6,7 @@ from services.logs_service import write_log
 from utils.email import send_email
 from uuid import UUID
 from fastapi.responses import JSONResponse
-from deps import decode_jwt
+from deps import decode_jwt, verify_jwt
 from utils.security import create_access_token
 
 
@@ -229,6 +229,23 @@ async def refresh_token_service(refresh_token: str, request: Request):
         )
 
         return {"success": True, "access_token": new_access_token}
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Token failed: {str(e)}"
+        )
+    
+
+async def verify_token_service(token: str, request: Request):
+    try:
+       
+        payload = verify_jwt(token.token)
+
+        return 1
 
     except HTTPException:
         raise

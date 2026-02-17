@@ -87,5 +87,5 @@ app.include_router(patient.router)
 
 @app.get("/")
 async def read_root():
-    return {"message": "Welcome to the MMM Doctor | Refer API "} 
+    return {"message": "Welcome to the MMM Patient API "} 
     

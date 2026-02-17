@@ -111,7 +111,33 @@ async def lifespan(app: FastAPI):
                 ON DELETE CASCADE
         );
     """)  
+        
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS medical_history (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
+            patient_id UUID NOT NULL,
+            doctor_id UUID NOT NULL,
+
+            diagnosis TEXT NOT NULL,
+            treatment_plan TEXT NOT NULL,
+            medications TEXT,
+            notes TEXT,
+
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+            CONSTRAINT fk_patient
+                FOREIGN KEY (patient_id)
+                REFERENCES app_user(id)
+                ON DELETE CASCADE,
+
+            CONSTRAINT fk_doctor
+                FOREIGN KEY (doctor_id)
+                REFERENCES app_user(id)
+                ON DELETE CASCADE
+        );
+    """)
 
     yield
     await app.state.pool.close()

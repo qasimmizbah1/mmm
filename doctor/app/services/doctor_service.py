@@ -159,3 +159,4 @@ async def view_profile_service(doctor_id, request: Request):
             return {"status_code": 200, "data": dict(row)}
         else:
             return {"status_code": 404, "message": "Doctor profile not found"}
+        

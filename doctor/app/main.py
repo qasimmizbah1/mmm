@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from database import lifespan
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from routers import doctor
+from routers import doctor, medical_history
 
 app = FastAPI(lifespan=lifespan)
 
@@ -84,6 +84,7 @@ BLOCK_DURATION = 120  # 1 hour in seconds
 
 # include auth routes
 app.include_router(doctor.router)
+app.include_router(medical_history.router)
 
 @app.get("/")
 async def read_root():

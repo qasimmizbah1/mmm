@@ -81,21 +81,11 @@ async def lifespan(app: FastAPI):
 
         
         await conn.execute("""
-        CREATE TABLE IF NOT EXISTS doctor_profile (
+        CREATE TABLE IF NOT EXISTS patient_profile (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-            doctor_id UUID UNIQUE NOT NULL,
-
-            full_name TEXT NOT NULL,
-            license_number TEXT NOT NULL,
-            registration TEXT NOT NULL,
-
-            clinic_name TEXT,
-            medical_field TEXT NOT NULL,
-
-            address TEXT NOT NULL,
+            patient_id UUID UNIQUE NOT NULL,
             phone TEXT NOT NULL,
-
             gender TEXT CHECK (
                 gender IN ('male','female','other')
             ),
@@ -105,13 +95,32 @@ async def lifespan(app: FastAPI):
             created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
             updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-            CONSTRAINT fk_doctor_user
-                FOREIGN KEY (doctor_id)
+            CONSTRAINT fk_patient_user
+                FOREIGN KEY (patient_id)
                 REFERENCES app_user(id)
                 ON DELETE CASCADE
         );
     """)  
+        
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS insurance (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
+            patient_id UUID NOT NULL,
+            insurance_name TEXT NOT NULL,
+            policy_number TEXT NOT NULL,
+            coverage_details TEXT NOT NULL,
+            notes TEXT,
 
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+            CONSTRAINT fk_patient_user
+                FOREIGN KEY (patient_id)
+                REFERENCES app_user(id)
+                ON DELETE CASCADE
+        );
+    """)
+        
     yield
     await app.state.pool.close()

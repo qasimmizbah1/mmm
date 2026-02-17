@@ -72,90 +72,125 @@ async def viewall_referrals_service(doctor_id, request: Request):
     
 
 
-async def view_referral_service(id, request: Request):
-    async with request.app.state.pool.acquire() as conn:
-        row = await conn.fetchrow("""
-            SELECT
-                r.*,
-                patient.user_name   AS patient_name,
-                therapist.user_name AS therapist_name,
-                referrer.user_name  AS referred_by_name
-            FROM referrals r
-            JOIN app_user patient   ON patient.id   = r.patient_id
-            JOIN app_user therapist ON therapist.id = r.therapist_id
-            LEFT JOIN app_user referrer ON referrer.id = r.doctor_id
-            WHERE r.id = $1
-        """, id)
 
-        if row:
-            row_dict = dict(row)
-            row_dict.pop("doctor_id", None)  # Remove doctor_id if it exists
-            return {"status_code": 200, "data": row_dict}
-        else:
-            return {"status_code": 404, "message": "Referral not found"}
-
-
-async def doctor_profile_service(data, request: Request):
+async def patient_profile_service(data, request: Request):
       
       async with request.app.state.pool.acquire() as conn:
         try:
             await conn.execute("""
-            INSERT INTO doctor_profile (
-                doctor_id,
-                full_name,
-                license_number,
-                registration,
-                clinic_name,
-                medical_field,
-                address,
+            INSERT INTO patient_profile (
+                patient_id,
                 phone,
                 gender,
                 dob
             )
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-            ON CONFLICT (doctor_id) 
+            VALUES ($1,$2,$3,$4)
+            ON CONFLICT (patient_id) 
             DO UPDATE SET
-                full_name       = COALESCE(EXCLUDED.full_name, doctor_profile.full_name),
-                license_number  = COALESCE(EXCLUDED.license_number, doctor_profile.license_number),
-                registration    = COALESCE(EXCLUDED.registration, doctor_profile.registration),
-                clinic_name     = COALESCE(EXCLUDED.clinic_name, doctor_profile.clinic_name),
-                medical_field   = COALESCE(EXCLUDED.medical_field, doctor_profile.medical_field),
-                address         = COALESCE(EXCLUDED.address, doctor_profile.address),
-                phone           = COALESCE(EXCLUDED.phone, doctor_profile.phone),
-                gender          = COALESCE(EXCLUDED.gender, doctor_profile.gender),
-                dob             = COALESCE(EXCLUDED.dob, doctor_profile.dob)
+                phone           = COALESCE(EXCLUDED.phone, patient_profile.phone),
+                gender          = COALESCE(EXCLUDED.gender, patient_profile.gender),
+                dob             = COALESCE(EXCLUDED.dob, patient_profile.dob)
         """,
-        data.doctor_id,
-        data.full_name,
-        data.license_number,
-        data.registration,
-        data.clinic_name,
-        data.medical_field,
-        data.address,
+        data.patient_id,
         data.phone,
         data.gender,
         data.dob
         )
-            return {"status_code": 200, "message": "Doctor profile updated successfully."}
-
+            return {"status": True, "message": "Patient profile updated successfully."}
         except Exception as e:
-             return {"status_code": 500, "message": f"Failed to update doctor profile: {str(e)}"}
+             return {"status": False, "message": f"Failed to update patient profile: {str(e)}"}
         
 
-async def view_profile_service(doctor_id, request: Request):
+async def view_profile_service(patient_id, request: Request):
     async with request.app.state.pool.acquire() as conn:
         
         row = await conn.fetchrow("""
             SELECT
                 dp.*,
-                au.user_name AS doctor_name,
-                au.email     AS doctor_email
-            FROM doctor_profile dp
-            JOIN app_user au ON au.id = dp.doctor_id
+                au.user_name AS patient_name,
+                au.email     AS patient_email
+            FROM patient_profile dp
+            JOIN app_user au ON au.id = dp.patient_id
             WHERE au.id = $1
-        """, doctor_id)
+        """, patient_id)
 
         if row:
-            return {"status_code": 200, "data": dict(row)}
+            return {"status": True, "data": dict(row)}
         else:
-            return {"status_code": 404, "message": "Doctor profile not found"}
+            return {"status": False, "message": "Patient profile not found"}
+        
+
+
+async def create_insurance_service(data, request: Request):
+    async with request.app.state.pool.acquire() as conn:
+        try:
+            
+            check_patient = await conn.fetchval("SELECT id FROM app_user WHERE id = $1 AND role = 'patient'", data.patient_id)
+
+            if not check_patient:
+                return {"status": False, "message": "Invalid patient ID. No such patient exists."}
+
+            await conn.execute("""
+            INSERT INTO insurance (
+                patient_id,
+                insurance_name,
+                policy_number,
+                coverage_details,
+                notes
+            )
+            VALUES ($1,$2,$3,$4,$5)
+        """,
+        data.patient_id,
+        data.insurance_name,
+        data.policy_number,
+        data.coverage_details,
+        data.notes
+        )
+            return {"status": True, "message": "Insurance information added successfully."}
+        except Exception as e:
+             return {"status": False, "message": f"Failed to add insurance information: {str(e)}"}
+        
+
+async def update_insurance_service(insurance_id, data, request: Request):
+    async with request.app.state.pool.acquire() as conn:
+        try:
+            await conn.execute("""
+            UPDATE insurance SET
+                insurance_name  = COALESCE($1, insurance_name),
+                policy_number   = COALESCE($2, policy_number),
+                coverage_details= COALESCE($3, coverage_details),
+                notes           = COALESCE($4, notes),
+                updated_at      = now()
+            WHERE id = $5
+        """,
+        data.insurance_name,
+        data.policy_number,
+        data.coverage_details,
+        data.notes,
+        insurance_id
+        )
+            return {"status": True, "message": "Insurance information updated successfully."}
+        except Exception as e:
+             return {"status": False, "message": f"Failed to update insurance information: {str(e)}"}
+        
+
+
+#view medical history
+async def view_medical_history_service(patient_id, request: Request):
+    async with request.app.state.pool.acquire() as conn:
+        try:
+            rows = await conn.fetch("""
+            SELECT
+                mh.*,
+                au.user_name AS patient_name
+            FROM medical_history mh
+            JOIN app_user au ON au.id = mh.patient_id
+            WHERE au.id = $1
+        """, patient_id)
+
+            if rows:
+                return {"status": True, "data": [dict(row) for row in rows]}
+            else:
+                return {"status": False, "message": "No medical history found for this patient."}
+        except Exception as e:
+             return {"status": False, "message": f"Failed to retrieve medical history: {str(e)}"}

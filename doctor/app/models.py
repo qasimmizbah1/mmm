@@ -44,3 +44,17 @@ class DoctorProfileCreate(BaseModel):
     phone: str
     gender: Literal["male", "female", "other"]
     dob: date
+
+class MedicalHistory(BaseModel):
+    patient_id: UUID
+    doctor_id: UUID
+    diagnosis: str
+    treatment_plan: str
+    medications: Optional[str] = None
+    notes: Optional[str] = None
+
+class updateMedicalHistory(BaseModel):
+    diagnosis: str
+    treatment_plan: str
+    medications: Optional[str] = None
+    notes: Optional[str] = None

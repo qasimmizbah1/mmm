@@ -33,14 +33,22 @@ class ReferralCreate(BaseModel):
     chief_complaint: str
     additional_requirements: Optional[str] = None
 
-class DoctorProfileCreate(BaseModel):
-    doctor_id: UUID
-    full_name: str
-    license_number: str
-    registration: str
-    clinic_name: Optional[str] = None
-    medical_field: str
-    address: str
+class PatientProfileCreate(BaseModel):
+    patient_id: UUID
     phone: str
     gender: Literal["male", "female", "other"]
     dob: date
+
+
+class InsuranceCreate(BaseModel):
+    patient_id: UUID
+    insurance_name: str
+    policy_number: str
+    coverage_details: str
+    notes: Optional[str] = None
+
+class UpdateInsurance(BaseModel):
+    insurance_name: Optional[str] = None
+    policy_number: Optional[str] = None
+    coverage_details: Optional[str] = None
+    notes: Optional[str] = None
