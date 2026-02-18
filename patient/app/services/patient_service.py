@@ -1,7 +1,9 @@
+from datetime import datetime
 from unittest import result
-from fastapi import APIRouter, HTTPException, Request, Depends, Response
+from fastapi import APIRouter, HTTPException, Request, Depends, Response, UploadFile
 from uuid import UUID
-
+import os
+import uuid
 
 async def view_user_service(user_role,request: Request):
     async with request.app.state.pool.acquire() as conn:
@@ -69,32 +71,80 @@ async def viewall_referrals_service(doctor_id, request: Request):
        
     except Exception as e:
            return {"status_code": 500, "message": f"Failed to retrieve referrals: {str(e)}"}
-    
+   
 
-
-
-async def patient_profile_service(data, request: Request):
+async def patient_profile_service(
+    request: Request,
+    patient_id: str,
+    phone: str,
+    gender: str,
+    dob: str,
+    profile_image: UploadFile = None
+):
       
       async with request.app.state.pool.acquire() as conn:
         try:
+
+            if not dob:
+                dob_value = None
+            else:
+                dob_value = datetime.strptime(dob, "%Y-%m-%d").date()
+
+            old_record = await conn.fetchrow(
+                "SELECT profile_image FROM patient_profile WHERE patient_id=$1",
+                patient_id
+            )
+            old_image_path = old_record["profile_image"] if old_record else None
+            
+            image_path = old_image_path
+
+            if profile_image:
+                BASE_DIR = os.path.dirname(os.path.dirname(
+                os.path.dirname( os.path.dirname(os.path.abspath(__file__)))
+                ))
+
+                upload_dir = os.path.join(BASE_DIR, "public_files/images")
+                print("Upload directory:", upload_dir)
+                os.makedirs(upload_dir, exist_ok=True)
+
+                if old_image_path and os.path.exists(old_image_path):
+                    print(f"Removing old image at: {old_image_path}")
+                    os.remove(old_image_path)
+                    
+
+                file_ext = profile_image.filename.split(".")[-1]
+                filename = f"{uuid.uuid4()}.{file_ext}"
+
+
+                image_path = f"{upload_dir}/{filename}"
+
+                with open(image_path, "wb") as buffer:
+                    buffer.write(await profile_image.read())
+
+                
+
             await conn.execute("""
             INSERT INTO patient_profile (
                 patient_id,
                 phone,
                 gender,
-                dob
+                dob,
+                profile_image
+                
             )
-            VALUES ($1,$2,$3,$4)
+            VALUES ($1,$2,$3,$4,$5)
             ON CONFLICT (patient_id) 
             DO UPDATE SET
                 phone           = COALESCE(EXCLUDED.phone, patient_profile.phone),
                 gender          = COALESCE(EXCLUDED.gender, patient_profile.gender),
-                dob             = COALESCE(EXCLUDED.dob, patient_profile.dob)
+                dob             = COALESCE(EXCLUDED.dob, patient_profile.dob),
+                profile_image   = COALESCE(EXCLUDED.profile_image, patient_profile.profile_image)
         """,
-        data.patient_id,
-        data.phone,
-        data.gender,
-        data.dob
+        patient_id,
+        phone,
+        gender,
+        dob_value,
+        filename
         )
             return {"status": True, "message": "Patient profile updated successfully."}
         except Exception as e:
@@ -118,7 +168,6 @@ async def view_profile_service(patient_id, request: Request):
             return {"status": True, "data": dict(row)}
         else:
             return {"status": False, "message": "Patient profile not found"}
-        
 
 
 async def create_insurance_service(data, request: Request):
@@ -172,8 +221,6 @@ async def update_insurance_service(insurance_id, data, request: Request):
             return {"status": True, "message": "Insurance information updated successfully."}
         except Exception as e:
              return {"status": False, "message": f"Failed to update insurance information: {str(e)}"}
-        
-
 
 #view medical history
 async def view_medical_history_service(patient_id, request: Request):

@@ -1,7 +1,9 @@
+import os
 from unittest import result
-from fastapi import APIRouter, HTTPException, Request, Depends, Response
+from fastapi import APIRouter, HTTPException, Request, Depends, Response, UploadFile
 from uuid import UUID
-
+from datetime import datetime
+import uuid
 
 async def view_user_service(user_role,request: Request):
     async with request.app.state.pool.acquire() as conn:
@@ -70,8 +72,6 @@ async def viewall_referrals_service(doctor_id, request: Request):
     except Exception as e:
            return {"status_code": 500, "message": f"Failed to retrieve referrals: {str(e)}"}
     
-
-
 async def view_referral_service(id, request: Request):
     async with request.app.state.pool.acquire() as conn:
         row = await conn.fetchrow("""
@@ -95,10 +95,45 @@ async def view_referral_service(id, request: Request):
             return {"status_code": 404, "message": "Referral not found"}
 
 
-async def doctor_profile_service(data, request: Request):
+async def doctor_profile_service(request: Request, doctor_id: str, full_name: str, license_number: str, registration: str, clinic_name: str, medical_field: str, address: str, phone: str, gender: str, dob: str, profile_image: UploadFile = None):
       
       async with request.app.state.pool.acquire() as conn:
         try:
+
+            if not dob:
+                dob_value = None
+            else:
+                dob_value = datetime.strptime(dob, "%Y-%m-%d").date()
+
+            old_record = await conn.fetchrow(
+                "SELECT profile_image FROM doctor_profile WHERE doctor_id=$1",
+                doctor_id
+            )
+            old_image_path = old_record["profile_image"] if old_record else None
+
+            image_path = old_image_path
+
+            if profile_image:
+                BASE_DIR = os.path.dirname(os.path.dirname(
+                os.path.dirname( os.path.dirname(os.path.abspath(__file__)))
+                ))
+
+                upload_dir = os.path.join(BASE_DIR, "public_files/images")
+                print("Upload directory:", upload_dir)
+                os.makedirs(upload_dir, exist_ok=True)
+
+                if old_image_path and os.path.exists(old_image_path):
+                    os.remove(old_image_path)
+
+                file_ext = profile_image.filename.split(".")[-1]
+                filename = f"{uuid.uuid4()}.{file_ext}"
+
+
+                image_path = f"{upload_dir}/{filename}"
+
+                with open(image_path, "wb") as buffer:
+                    buffer.write(await profile_image.read())
+                    
             await conn.execute("""
             INSERT INTO doctor_profile (
                 doctor_id,
@@ -110,9 +145,10 @@ async def doctor_profile_service(data, request: Request):
                 address,
                 phone,
                 gender,
-                dob
+                dob,
+                profile_image
             )
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
             ON CONFLICT (doctor_id) 
             DO UPDATE SET
                 full_name       = COALESCE(EXCLUDED.full_name, doctor_profile.full_name),
@@ -123,18 +159,20 @@ async def doctor_profile_service(data, request: Request):
                 address         = COALESCE(EXCLUDED.address, doctor_profile.address),
                 phone           = COALESCE(EXCLUDED.phone, doctor_profile.phone),
                 gender          = COALESCE(EXCLUDED.gender, doctor_profile.gender),
-                dob             = COALESCE(EXCLUDED.dob, doctor_profile.dob)
+                dob             = COALESCE(EXCLUDED.dob, doctor_profile.dob),
+                profile_image   = COALESCE(EXCLUDED.profile_image, doctor_profile.profile_image)
         """,
-        data.doctor_id,
-        data.full_name,
-        data.license_number,
-        data.registration,
-        data.clinic_name,
-        data.medical_field,
-        data.address,
-        data.phone,
-        data.gender,
-        data.dob
+        doctor_id,
+        full_name,
+        license_number,
+        registration,
+        clinic_name,
+        medical_field,
+        address,
+        phone,
+        gender,
+        dob_value,
+        filename if profile_image else None
         )
             return {"status_code": 200, "message": "Doctor profile updated successfully."}
 

@@ -6,13 +6,29 @@ from fastapi.responses import JSONResponse
 from database import lifespan
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from routers import patient
+from routers import patient, insurance
+import os
+
 
 app = FastAPI(lifespan=lifespan)
 
-#app.mount("/image", StaticFiles(directory="/public_files/images"), name="images")
+# upload_path = os.path.join(os.getcwd(), "uploads")
+# app.mount("/uploads", StaticFiles(directory=upload_path), name="uploads")
+
+# BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# upload_path = os.path.join(BASE_DIR, "public_files/")
+# app.mount("/public_files", StaticFiles(directory=upload_path), name="public_files")
+
+BASE_DIR = os.path.dirname(
+    os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))
+    )
+)
+upload_path = os.path.join(BASE_DIR, "public_files")
+app.mount("/public_files", StaticFiles(directory=upload_path), name="public_files")
 
 
+print("Upload path:", upload_path)
 origins = [
     "https://auto-parts-front.vercel.app",
     "http://localhost:3000",
@@ -84,6 +100,7 @@ BLOCK_DURATION = 120  # 1 hour in seconds
 
 # include auth routes
 app.include_router(patient.router)
+app.include_router(insurance.router)
 
 @app.get("/")
 async def read_root():

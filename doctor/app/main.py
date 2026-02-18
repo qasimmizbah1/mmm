@@ -7,11 +7,19 @@ from database import lifespan
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from routers import doctor, medical_history
+import os
 
 app = FastAPI(lifespan=lifespan)
 
-#app.mount("/image", StaticFiles(directory="/public_files/images"), name="images")
+BASE_DIR = os.path.dirname(
+    os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))
+    )
+)
+upload_path = os.path.join(BASE_DIR, "public_files")
+app.mount("/public_files", StaticFiles(directory=upload_path), name="public_files")
 
+#print("Upload path:", upload_path)
 
 origins = [
     "https://auto-parts-front.vercel.app",
